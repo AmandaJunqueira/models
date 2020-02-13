@@ -1,0 +1,146 @@
+---
+output:
+  rmarkdown::html_document:
+    theme: cosmo
+---
+<center>
+![ ](data/image4.png)
+
+---
+</center>
+
+<div style ="text-align: justify; margin-bottom:50px;">
+
+
+```{r, include = FALSE}
+library(caret)
+library(rmarkdown)
+library(knitr)
+library(dplyr)
+
+```
+
+
+ <p style="font-family: times, serif; font-size:20pt; font-style:italic">
+ 
+          In order to battle for best prices and exclusive products, Blackwell decided it is time to pursue a partnership with an accessory maker. We are here to analyse which is the preferred brand within its customers. 
+           Our goal in this analysis is to provide a table of results for brand preference among Blackwell's customers, including the predicted answer for the no responses. 
+  
+  </p>
+
+<center>
+![ ](data/image5.png)
+
+ 
+ </center>
+ <p style="font-family: times, serif; font-size:20pt; font-style:italic">
+ 
+        We built the model using 75% of the complete data (with brand preference answers), and then tested its accuracy with a performance method. 
+  
+  </p>
+  <center>
+![ ](data/image6.png) 
+ </center>
+ 
+ <p style="font-family: times, serif; font-size:20pt; font-style:italic">
+ 
+        We have choosen the KNN model due to its better perfomance, as it shows above.   
+  
+  </p>
+  
+```{r, include = FALSE}
+surveyData <- read.csv("data/surveyBelkinElago.csv", sep = ";", dec = ",")
+summary(surveyData)
+
+#select only age and salary
+dataData <- surveyData %>% select(age, salary, brand)
+
+#normalization
+normalData <- preProcess(dataData, method = c("range"))
+print(normalData)
+transformed <- predict(normalData, dataData)
+summary(transformed)
+
+
+incompleteSurvey <- transformed %>% filter(brand == " ")
+
+completeSurvey <- transformed %>% filter(brand != " ")
+
+completeSurvey$brand = as.character(completeSurvey$brand)
+
+completeSurvey$brand = as.factor(completeSurvey$brand)
+
+#select 75/100 for training the model
+inTrain <- createDataPartition(
+  y = completeSurvey$salary,
+  p = .75,
+  list = FALSE
+)
+#training and testing
+training <- completeSurvey[inTrain, ]
+testing <- completeSurvey[-inTrain, ] 
+
+my_knn_model <- train(brand ~ .,
+                      method = "knn",
+                      data = training,
+                      tuneGrid = expand.grid(k = c(60, 70, 80)))
+```
+ 
+ 
+ 
+```{r, echo = FALSE}
+(my_knn_model)
+```
+   <p style="font-family: times, serif; font-size:20pt; font-style:italic">
+ 
+       To test wether the model is reliable enough we tested this trained model with the 25% remaining complete data.  
+  
+  </p>
+  
+```{r, include = FALSE}
+prediction <- predict(my_knn_model, testing)
+
+confusionMatrix(data = prediction, reference = testing$brand)
+
+training$brand = as.character(training$brand)
+
+training$brand = as.factor(training$brand)
+```
+  
+  
+  
+  <p style="font-family: times, serif; font-size:20pt; font-style:italic">
+ 
+       A confusion matrix is a table that is often used to describe the performance of a classification model (or "classifier") on a set of test data for which the true values are known. The tested model presented the results above.
+  
+  </p>
+  
+  
+  
+```{r, echo = FALSE}
+confusionMatrix(data = prediction, reference = testing$brand)
+```
+  
+
+    
+  
+  <p style="font-family: times, serif; font-size:20pt; font-style:italic">
+ 
+       After making sure the model is reliable we can use it to predict the non responders' answer. So, after applying the model we have the predicted answer for the 5000 customers that decided not to answer. Then, finally we can merge all data and plot a table that contains all results, making it clear which is the prefered brand.
+  
+  </p>
+  
+  
+
+<center>
+![ ](data/image7.png) 
+
+  <p style="font-family: times, serif; font-size:20pt; font-style:italic">
+ 
+       In the end, there is a 3.5% more preference for Elago. 
+  </p>
+
+<center>
+![ ](data/image8.png)
+</center>
+  
